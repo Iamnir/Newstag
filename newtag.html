@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNews API Search Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .search-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .suggestion {
+            background: #e9f7fe;
+            color: #0984e3;
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .suggestion:hover {
+            background: #d0ebff;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        .note {
+            background-color: #fffbea;
+            border-left: 4px solid #fbc02d;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        .article {
+            margin-bottom: 20px;
+        }
+        .article h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .article-meta {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .article-content {
+            margin-top: 15px;
+            line-height: 1.7;
+        }
+        .article-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .error-message {
+            background-color: #ffecec;
+            color: #e74c3c;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .export-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+        .column-selector {
+            margin-bottom: 20px;
+        }
+        .column-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .column-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .column-option input[type="checkbox"] {
+            width: auto;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .export-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Media Coverage</h1>
+    
+    <div class="search-container">
+        <div class="form-group">
+            <label for="apiKey">API Key:</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key">
+        </div>
+        
+        <div class="form-group">
+            <label for="searchType">Search By:</label>
+            <select id="searchType">
+                <option value="keywords">Keywords</option>
+                <option value="title">Article Title</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="searchQuery">Search Terms:</label>
+            <input type="text" id="searchQuery" placeholder="Enter keywords or title to search">
+            <div class="suggestions">
+                <div class="suggestion" onclick="selectSuggestion('deep tech')">deep tech</div>
+                <div class="suggestion" onclick="selectSuggestion('funding')">funding</div>
+                <div class="suggestion" onclick="selectSuggestion('VC')">VC</div>
+                <div class="suggestion" onclick="selectSuggestion('startup')">startup</div>
+                <div class="suggestion" onclick="selectSuggestion('AI')">AI</div>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="it">Italian</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="ru">Russian</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                    <option value="ko">Korean</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="country">Country:</label>
+                <select id="country">
+                    <option value="">Any Country</option>
+                    <option value="us">United States</option>
+                    <option value="gb">United Kingdom</option>
+                    <option value="ca">Canada</option>
+                    <option value="au">Australia</option>
+                    <option value="de">Germany</option>
+                    <option value="fr">France</option>
+                    <option value="it">Italy</option>
+                    <option value="es">Spain</option>
+                    <option value="in">India</option>
+                    <option value="jp">Japan</option>
+                    <option value="cn">China</option>
+                    <option value="br">Brazil</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="note">
+            <p><strong>Note:</strong> GNews API supports multiple languages and countries. Select your preferred language and country to filter results, or leave country as "Any Country" for global results.</p>
+        </div>
+        
+        <button onclick="searchNews()">Search</button>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="loader" id="loader"></div>
+    </div>
+    
+    <div class="export-section" id="exportSection">
+        <h3>Export Options</h3>
+        <div class="column-selector">
+            <label>Select Columns to Export:</label>
+            <div class="column-options">
+                <div class="column-option">
+                    <input type="checkbox" id="col-title" checked>
+                    <label for="col-title">Title</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-source" checked>
+                    <label for="col-source">Source</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-date" checked>
+                    <label for="col-date">Published Date</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-country" checked>
+                    <label for="col-country">Country</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-url" checked>
+                    <label for="col-url">URL</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-content" checked>
+                    <label for="col-content">Content</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-description">
+                    <label for="col-description">Description</label>
+                </div>
+                <div class="column-option">
+                    <input type="checkbox" id="col-image">
+                    <label for="col-image">Image URL</label>
+                </div>
+            </div>
+        </div>
+        <div class="export-buttons">
+            <button class="export-button" onclick="exportData('csv')">Export as CSV</button>
+            <button class="export-button" onclick="exportData('excel')">Export as Excel</button>
+            <button class="export-button" onclick="exportData('dta')">Export as DTA</button>
+            <button class="export-button" onclick="exportData('txt')">Export as Text</button>
+        </div>
+    </div>
+    
+    <div class="result-container" id="resultContainer">
+        <div class="article">
+            <h2 id="articleTitle"></h2>
+            <div class="article-meta">
+                <div><strong>Source:</strong> <span id="articleSource"></span></div>
+                <div><strong>Published:</strong> <span id="articleDate"></span></div>
+                <div><strong>Country:</strong> <span id="articleCountry"></span></div>
+                <div><strong>URL:</strong> <a id="articleUrl" href="#" target="_blank"></a></div>
+            </div>
+            <img id="articleImage" class="article-image" style="display: none;" alt="Article image">
+            <div class="article-content" id="articleContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Country code to country name mapping
+        const countryNames = {
+            'us': 'United States',
+            'gb': 'United Kingdom', 
+            'ca': 'Canada',
+            'au': 'Australia',
+            'de': 'Germany',
+            'fr': 'France',
+            'it': 'Italy',
+            'es': 'Spain',
+            'in': 'India',
+            'jp': 'Japan',
+            'cn': 'China',
+            'br': 'Brazil'
+        };
+        
+        // Simple fuzzy matching function for titles
+        function fuzzyMatch(needle, haystack) {
+            needle = needle.toLowerCase();
+            haystack = haystack.toLowerCase();
+            
+            // Direct match gets highest score
+            if (haystack.includes(needle)) {
+                return 100;
+            }
+            
+            const needleWords = needle.split(/\s+/);
+            let score = 0;
+            
+            // Check each word in the needle
+            for (const word of needleWords) {
+                if (word.length < 3) continue; // Skip very short words
+                if (haystack.includes(word)) {
+                    score += 10; // Whole word match is good
+                } else {
+                    // Try to find partial matches
+                    for (let i = 3; i <= word.length; i++) {
+                        const part = word.substring(0, i);
+                        if (haystack.includes(part)) {
+                            score += i / word.length * 5; // Partial match gives proportional score
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            return score;
+        }
+        
+        function selectSuggestion(suggestion) {
+            document.getElementById('searchQuery').value = suggestion;
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        function extractYear(dateString) {
+            const date = new Date(dateString);
+            return date.getFullYear();
+        }
+        
+        function getCountryFromUrl(url) {
+            try {
+                const domain = new URL(url).hostname;
+                
+                // Check for country-specific TLDs
+                if (domain.endsWith('.uk')) return 'United Kingdom';
+                if (domain.endsWith('.ca')) return 'Canada';
+                if (domain.endsWith('.au')) return 'Australia';
+                if (domain.endsWith('.in')) return 'India';
+                if (domain.endsWith('.jp')) return 'Japan';
+                if (domain.endsWith('.fr')) return 'France';
+                if (domain.endsWith('.de')) return 'Germany';
+                if (domain.endsWith('.it')) return 'Italy';
+                if (domain.endsWith('.es')) return 'Spain';
+                if (domain.endsWith('.br')) return 'Brazil';
+                if (domain.endsWith('.cn')) return 'China';
+                
+                // For generic TLDs, try to infer from domain name
+                if (domain.includes('bbc')) return 'United Kingdom';
+                if (domain.includes('cnn') || domain.includes('nytimes') || domain.includes('washingtonpost')) return 'United States';
+                
+                // Default fallback
+                return 'Unknown';
+            } catch (e) {
+                return 'Unknown';
+            }
+        }
+        
+        async function searchNews() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const searchQuery = document.getElementById('searchQuery').value.trim();
+            const searchType = document.getElementById('searchType').value;
+            const language = document.getElementById('language').value;
+            const country = document.getElementById('country').value;
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            // Hide previous results and errors
+            resultContainer.style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            // Validate inputs
+            if (!apiKey) {
+                showError('Please enter your GNews API key');
+                return;
+            }
+            
+            if (!searchQuery) {
+                showError('Please enter search terms');
+                return;
+            }
+            
+            // Show loader
+            loader.style.display = 'block';
+            
+            try {
+                // Construct API URL for GNews
+                let apiUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(searchQuery)}&lang=${language}&apikey=${apiKey}`;
+                
+                // Add country filter if specified
+                if (country) {
+                    apiUrl += `&country=${country}`;
+                }
+                
+                // For title search, we'll get more results to find the best match
+                if (searchType === 'title') {
+                    apiUrl += '&max=10';
+                } else {
+                    apiUrl += '&max=1';
+                }
+                
+                // Make API request to GNews
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                // Hide loader
+                loader.style.display = 'none';
+                
+                // Check for errors
+                if (response.status !== 200) {
+                    if (response.status === 403) {
+                        showError('Invalid API key or access denied. Please check your GNews API key.');
+                    } else if (response.status === 429) {
+                        showError('API rate limit exceeded. Please try again later.');
+                    } else {
+                        showError(`Error: ${data.message || 'Unknown error occurred'}`);
+                    }
+                    return;
+                }
+                
+                // Check if there are results
+                if (!data.articles || data.articles.length === 0) {
+                    showError('No articles found for this query.');
+                    return;
+                }
+                
+                let article;
+                
+                // For title search, do fuzzy matching to find the best match
+                if (searchType === 'title' && data.articles.length > 1) {
+                    // Score each article by how well the title matches the search query
+                    const scoredArticles = data.articles.map(art => ({
+                        article: art,
+                        score: fuzzyMatch(searchQuery, art.title)
+                    }));
+                    
+                    // Sort by score (highest first)
+                    scoredArticles.sort((a, b) => b.score - a.score);
+                    
+                    // Use the best match
+                    article = scoredArticles[0].article;
+                } else {
+                    // For keyword search or if only one result, use the first article
+                    article = data.articles[0];
+                }
+                
+                // Update the UI with article data
+                document.getElementById('articleTitle').textContent = article.title;
+                document.getElementById('articleSource').textContent = article.source.name;
+                document.getElementById('articleDate').textContent = `${formatDate(article.publishedAt)} (${extractYear(article.publishedAt)})`;
+                
+                // Determine country - use selected country or infer from URL
+                let articleCountry = country ? countryNames[country] : getCountryFromUrl(article.url);
+                document.getElementById('articleCountry').textContent = articleCountry;
+                
+                // Set content
+                document.getElementById('articleContent').textContent = article.content || article.description;
+                
+                // Set URL
+                const urlElement = document.getElementById('articleUrl');
+                urlElement.href = article.url;
+                urlElement.textContent = article.url;
+                
+                // Handle image if available
+                const imageElement = document.getElementById('articleImage');
+                if (article.image) {
+                    imageElement.src = article.image;
+                    imageElement.style.display = 'block';
+                } else {
+                    imageElement.style.display = 'none';
+                }
+                
+                // Show results
+                resultContainer.style.display = 'block';
+                
+            } catch (error) {
+                // Hide loader
+                loader.style.display = 'none';
+                
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    showError('Network error: Unable to connect to GNews API. Please check your internet connection and try again.');
+                } else {
+                    showError('An error occurred while fetching the data. Please try again.');
+                }
+                console.error('Error:', error);
+            }
+        }
+        
+        // Allow Enter key to trigger search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchNews();
+            }
+        });
+    </script>
+</body>
+</html>
