@@ -246,7 +246,7 @@
         </div>
         
         <div class="note">
-            <p><strong>Note:</strong> GNews API supports multiple languages and countries. Select your preferred language and country to filter results, or leave country as "Any Country" for global results.</p>
+            <p><strong>Note:</strong> News API currently supports multiple languages and countries. Select your preferred language and country to filter results, or leave country as "Any Country" for global results.</p>
         </div>
         
         <button onclick="searchNews()">Search</button>
@@ -316,6 +316,9 @@
     </div>
     
     <script>
+        // Global variable to store current article data
+        let currentArticleData = null;
+        
         // Country code to country name mapping
         const countryNames = {
             'us': 'United States',
@@ -378,6 +381,187 @@
             }, 5000);
         }
         
+        function getSelectedColumns() {
+            const columns = [];
+            const columnMapping = {
+                'col-title': 'title',
+                'col-source': 'source',
+                'col-date': 'publishedDate',
+                'col-country': 'country',
+                'col-url': 'url',
+                'col-content': 'content',
+                'col-description': 'description',
+                'col-image': 'imageUrl'
+            };
+            
+            for (const [checkboxId, columnName] of Object.entries(columnMapping)) {
+                if (document.getElementById(checkboxId).checked) {
+                    columns.push(columnName);
+                }
+            }
+            
+            return columns;
+        }
+        
+        function exportData(format) {
+            if (!currentArticleData) {
+                showError('No data available to export. Please search for articles first.');
+                return;
+            }
+            
+            const selectedColumns = getSelectedColumns();
+            if (selectedColumns.length === 0) {
+                showError('Please select at least one column to export.');
+                return;
+            }
+            
+            const data = {};
+            selectedColumns.forEach(col => {
+                data[col] = currentArticleData[col];
+            });
+            
+            switch (format) {
+                case 'csv':
+                    exportAsCSV(data, selectedColumns);
+                    break;
+                case 'excel':
+                    exportAsExcel(data, selectedColumns);
+                    break;
+                case 'dta':
+                    exportAsDTA(data, selectedColumns);
+                    break;
+                case 'txt':
+                    exportAsText(data, selectedColumns);
+                    break;
+            }
+        }
+        
+        function exportAsCSV(data, columns) {
+            const headers = columns.map(col => {
+                const headerNames = {
+                    'title': 'Title',
+                    'source': 'Source',
+                    'publishedDate': 'Published Date',
+                    'country': 'Country',
+                    'url': 'URL',
+                    'content': 'Content',
+                    'description': 'Description',
+                    'imageUrl': 'Image URL'
+                };
+                return headerNames[col] || col;
+            });
+            
+            const values = columns.map(col => {
+                const value = data[col] || '';
+                // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                    return '"' + value.replace(/"/g, '""') + '"';
+                }
+                return value;
+            });
+            
+            const csvContent = headers.join(',') + '\n' + values.join(',');
+            downloadFile(csvContent, 'article_data.csv', 'text/csv');
+        }
+        
+        function exportAsExcel(data, columns) {
+            // Create a simple XML-based Excel file (SpreadsheetML format)
+            let xmlContent = `<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
+<Worksheet ss:Name="Article Data">
+<Table>
+<Row>`;
+            
+            // Add headers
+            columns.forEach(col => {
+                const headerNames = {
+                    'title': 'Title',
+                    'source': 'Source',
+                    'publishedDate': 'Published Date',
+                    'country': 'Country',
+                    'url': 'URL',
+                    'content': 'Content',
+                    'description': 'Description',
+                    'imageUrl': 'Image URL'
+                };
+                xmlContent += `<Cell><Data ss:Type="String">${headerNames[col] || col}</Data></Cell>`;
+            });
+            
+            xmlContent += '</Row><Row>';
+            
+            // Add data
+            columns.forEach(col => {
+                const value = (data[col] || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                xmlContent += `<Cell><Data ss:Type="String">${value}</Data></Cell>`;
+            });
+            
+            xmlContent += '</Row></Table></Worksheet></Workbook>';
+            
+            downloadFile(xmlContent, 'article_data.xls', 'application/vnd.ms-excel');
+        }
+        
+        function exportAsDTA(data, columns) {
+            // Create a simple Stata-like format (actually a tab-delimited file with .dta extension)
+            const headers = columns.map(col => {
+                const headerNames = {
+                    'title': 'title',
+                    'source': 'source',
+                    'publishedDate': 'published_date',
+                    'country': 'country',
+                    'url': 'url',
+                    'content': 'content',
+                    'description': 'description',
+                    'imageUrl': 'image_url'
+                };
+                return headerNames[col] || col;
+            });
+            
+            const values = columns.map(col => {
+                const value = data[col] || '';
+                // For DTA format, replace tabs and newlines
+                return typeof value === 'string' ? value.replace(/[\t\n\r]/g, ' ') : value;
+            });
+            
+            const dtaContent = headers.join('\t') + '\n' + values.join('\t');
+            downloadFile(dtaContent, 'article_data.dta', 'application/octet-stream');
+        }
+        
+        function exportAsText(data, columns) {
+            let textContent = 'Article Data Export\n';
+            textContent += '='.repeat(50) + '\n\n';
+            
+            columns.forEach(col => {
+                const headerNames = {
+                    'title': 'Title',
+                    'source': 'Source',
+                    'publishedDate': 'Published Date',
+                    'country': 'Country',
+                    'url': 'URL',
+                    'content': 'Content',
+                    'description': 'Description',
+                    'imageUrl': 'Image URL'
+                };
+                
+                const header = headerNames[col] || col;
+                const value = data[col] || 'N/A';
+                textContent += `${header}:\n${value}\n\n`;
+            });
+            
+            downloadFile(textContent, 'article_data.txt', 'text/plain');
+        }
+        
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
@@ -424,9 +608,11 @@
             const country = document.getElementById('country').value;
             const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('resultContainer');
+            const exportSection = document.getElementById('exportSection');
             
             // Hide previous results and errors
             resultContainer.style.display = 'none';
+            exportSection.style.display = 'none';
             document.getElementById('errorMessage').style.display = 'none';
             
             // Validate inputs
@@ -504,6 +690,18 @@
                     article = data.articles[0];
                 }
                 
+                // Store article data for export
+                currentArticleData = {
+                    title: article.title,
+                    source: article.source.name,
+                    publishedDate: formatDate(article.publishedAt),
+                    country: articleCountry,
+                    url: article.url,
+                    content: article.content || '',
+                    description: article.description || '',
+                    imageUrl: article.image || ''
+                };
+                
                 // Update the UI with article data
                 document.getElementById('articleTitle').textContent = article.title;
                 document.getElementById('articleSource').textContent = article.source.name;
@@ -530,15 +728,16 @@
                     imageElement.style.display = 'none';
                 }
                 
-                // Show results
+                // Show results and export options
                 resultContainer.style.display = 'block';
+                exportSection.style.display = 'block';
                 
             } catch (error) {
                 // Hide loader
                 loader.style.display = 'none';
                 
                 if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                    showError('Network error: Unable to connect to GNews API. Please check your internet connection and try again.');
+                    showError('Network error: Unable to connect to API. Please check your internet connection and try again.');
                 } else {
                     showError('An error occurred while fetching the data. Please try again.');
                 }
