@@ -86,44 +86,6 @@
         button:hover {
             background-color: #2980b9;
         }
-        .result-container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-        .article {
-            margin-bottom: 20px;
-        }
-        .article h2 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        .article-meta {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin-bottom: 10px;
-        }
-        .article-content {
-            margin-top: 15px;
-            line-height: 1.7;
-        }
-        .article-image {
-            width: 100%;
-            max-width: 400px;
-            height: auto;
-            border-radius: 4px;
-            margin: 15px 0;
-        }
-        .error-message {
-            background-color: #ffecec;
-            color: #e74c3c;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            display: none;
-        }
         .export-section {
             background: white;
             border-radius: 8px;
@@ -163,6 +125,47 @@
             cursor: pointer;
             font-size: 14px;
             transition: background 0.3s;
+        }
+        .export-button:hover {
+            background-color: #229954;
+        }
+        .result-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        .article {
+            margin-bottom: 20px;
+        }
+        .article h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .article-meta {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .article-content {
+            margin-top: 15px;
+            line-height: 1.7;
+        }
+        .article-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .error-message {
+            background-color: #ffecec;
+            color: #e74c3c;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
         }
         .loader {
             border: 5px solid #f3f3f3;
@@ -246,7 +249,7 @@
         </div>
         
         <div class="note">
-            <p><strong>Note:</strong> News API currently supports multiple languages and countries. Select your preferred language and country to filter results, or leave country as "Any Country" for global results.</p>
+            <p><strong>Note:</strong> GNews API supports multiple languages and countries. Select your preferred language and country to filter results, or leave country as "Any Country" for global results.</p>
         </div>
         
         <button onclick="searchNews()">Search</button>
@@ -379,6 +382,44 @@
             setTimeout(() => {
                 errorElement.style.display = 'none';
             }, 5000);
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        function extractYear(dateString) {
+            const date = new Date(dateString);
+            return date.getFullYear();
+        }
+        
+        function getCountryFromUrl(url) {
+            try {
+                const domain = new URL(url).hostname;
+                
+                // Check for country-specific TLDs
+                if (domain.endsWith('.uk')) return 'United Kingdom';
+                if (domain.endsWith('.ca')) return 'Canada';
+                if (domain.endsWith('.au')) return 'Australia';
+                if (domain.endsWith('.in')) return 'India';
+                if (domain.endsWith('.jp')) return 'Japan';
+                if (domain.endsWith('.fr')) return 'France';
+                if (domain.endsWith('.de')) return 'Germany';
+                if (domain.endsWith('.it')) return 'Italy';
+                if (domain.endsWith('.es')) return 'Spain';
+                if (domain.endsWith('.br')) return 'Brazil';
+                if (domain.endsWith('.cn')) return 'China';
+                
+                // For generic TLDs, try to infer from domain name
+                if (domain.includes('bbc')) return 'United Kingdom';
+                if (domain.includes('cnn') || domain.includes('nytimes') || domain.includes('washingtonpost')) return 'United States';
+                
+                // Default fallback
+                return 'Unknown';
+            } catch (e) {
+                return 'Unknown';
+            }
         }
         
         function getSelectedColumns() {
@@ -562,44 +603,6 @@
             window.URL.revokeObjectURL(url);
         }
         
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-        }
-        
-        function extractYear(dateString) {
-            const date = new Date(dateString);
-            return date.getFullYear();
-        }
-        
-        function getCountryFromUrl(url) {
-            try {
-                const domain = new URL(url).hostname;
-                
-                // Check for country-specific TLDs
-                if (domain.endsWith('.uk')) return 'United Kingdom';
-                if (domain.endsWith('.ca')) return 'Canada';
-                if (domain.endsWith('.au')) return 'Australia';
-                if (domain.endsWith('.in')) return 'India';
-                if (domain.endsWith('.jp')) return 'Japan';
-                if (domain.endsWith('.fr')) return 'France';
-                if (domain.endsWith('.de')) return 'Germany';
-                if (domain.endsWith('.it')) return 'Italy';
-                if (domain.endsWith('.es')) return 'Spain';
-                if (domain.endsWith('.br')) return 'Brazil';
-                if (domain.endsWith('.cn')) return 'China';
-                
-                // For generic TLDs, try to infer from domain name
-                if (domain.includes('bbc')) return 'United Kingdom';
-                if (domain.includes('cnn') || domain.includes('nytimes') || domain.includes('washingtonpost')) return 'United States';
-                
-                // Default fallback
-                return 'Unknown';
-            } catch (e) {
-                return 'Unknown';
-            }
-        }
-        
         async function searchNews() {
             const apiKey = document.getElementById('apiKey').value.trim();
             const searchQuery = document.getElementById('searchQuery').value.trim();
@@ -617,7 +620,7 @@
             
             // Validate inputs
             if (!apiKey) {
-                showError('Please enter your GNews API key');
+                showError('Please enter your API key');
                 return;
             }
             
@@ -655,7 +658,7 @@
                 // Check for errors
                 if (response.status !== 200) {
                     if (response.status === 403) {
-                        showError('Invalid API key or access denied. Please check your GNews API key.');
+                        showError('Invalid API key or access denied. Please check your API key.');
                     } else if (response.status === 429) {
                         showError('API rate limit exceeded. Please try again later.');
                     } else {
@@ -690,6 +693,9 @@
                     article = data.articles[0];
                 }
                 
+                // Determine country - use selected country or infer from URL
+                let articleCountry = country ? countryNames[country] : getCountryFromUrl(article.url);
+                
                 // Store article data for export
                 currentArticleData = {
                     title: article.title,
@@ -706,9 +712,6 @@
                 document.getElementById('articleTitle').textContent = article.title;
                 document.getElementById('articleSource').textContent = article.source.name;
                 document.getElementById('articleDate').textContent = `${formatDate(article.publishedAt)} (${extractYear(article.publishedAt)})`;
-                
-                // Determine country - use selected country or infer from URL
-                let articleCountry = country ? countryNames[country] : getCountryFromUrl(article.url);
                 document.getElementById('articleCountry').textContent = articleCountry;
                 
                 // Set content
